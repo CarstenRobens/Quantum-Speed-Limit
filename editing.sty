@@ -1,0 +1,150 @@
+%% Copyright editing.sty Latex package, Andrea Alberti a.alberti82@gmail.com (2016)
+
+\NeedsTeXFormat{LaTeX2e}[1994/06/01]
+\ProvidesPackage{editing}
+  [2011/01/11 v0.01 LaTeX package for my own purpose]
+
+\RequirePackage[svgnames]{xcolor}
+\RequirePackage[normalem]{ulem}
+\RequirePackage{soul}
+\RequirePackage{xstring}
+\RequirePackage{xparse}
+
+\newif\iffirstitem@citeediting
+\ExplSyntaxOn%
+\NewDocumentCommand{\cite@editing}{>{\SplitList{,}}m}%
+{\firstitem@citeeditingtrue[\ProcessList{#1}{\davs__myitem:n}]}%
+\cs_new_protected:Nn \davs__myitem:n%
+{\iffirstitem@citeediting%
+\firstitem@citeeditingfalse%
+\else%
+,\hspace{2.5pt}%
+\fi%
+\citenum{#1}}%
+\ExplSyntaxOff%
+
+\def\conf@sout@editing{%
+\long\def\cite{\cite@editing}%
+}
+
+\def\rempar #1\par{#1}
+% \def\unpacklipsum#1{%
+%     \edef#1{\lipsum@i}%
+% }
+%
+% unpack a lipsum paragraph
+% \unpacklipsum{2}{2}{\mycommand}
+% remove the \par token at end (hopefully) using `\rempar`:
+% \edef\tmpx{\expandafter\rempar\mycommand}
+% check if the actual lipsum text appears in terminal
+% \typeout{\meaning\tmpx}
+
+% typeset a working "\sout{\lipsum[2]}":
+% \expandafter\sout\expandafter{\tmpx}
+
+% Syntax: \STOP[color][length_sep]{text}
+%
+\newlength{\lenone@STOP}
+\newlength{\lentwo@STOP}
+\newlength{\lenthree@STOP}
+%
+\long\def\STOP{\@ifnextchar[{\@STOPa}{\@STOPa[2pt]}}%
+\long\def\@STOPa[#1]{\@ifnextchar[{\@STOPb[#1]}{\@STOPb[#1][red]}}%
+\long\def\@STOPb[#1][#2]#3{{\hypersetup{citecolor=#1}\color{#1}\newbox{\edited}\savebox{\edited}{%
+\mbox{\textsc{\MakeLowercase{#3}}}}%
+\setlength{\lenthree@STOP}{#2}\setlength{\lenone@STOP}{\wd\edited}%
+\lentwo@STOP=\linewidth\addtolength{\lentwo@STOP}{-\lenone@STOP}\addtolength{\lentwo@STOP}%
+{-\dimexpr\lenthree@STOP*2\relax}\par\noindent{\raisebox{1.55pt}[0pt][0pt]%
+{\rule{\dimexpr\lentwo@STOP/2\relax}{0.8pt}}\hspace{\lenthree@STOP}\usebox{\edited}\hspace{\lenthree@STOP}%
+\raisebox{1.55pt}[0pt][0pt]{\rule{\dimexpr\lentwo@STOP/2\relax}{0.8pt}}}}}%
+
+\def\editingstate@on{on}
+\def\editingstate@off{off}
+\def\editingstate@onoff{onoff}
+\def\editingstate@undefined{undefined}
+
+\long\def\changeAllOn{\def\changeAll@state{on}}
+\long\def\changeAllOff{\def\changeAll@state{off}}
+\long\def\changeAllOnOff{\def\changeAll@state{onoff}}
+\long\def\changeAllUndefined{\def\changeAll@state{undefined}}
+
+\changeAllUndefined
+
+\newcommand{\newchange}[3]{%
+\expandafter\long\expandafter\def\csname change#1On\endcsname{\expandafter\long\expandafter\def%
+\csname change#1@state\endcsname{\ifx\changeAll@state\editingstate@undefined\editingstate@on%
+\else \changeAll@state\fi}}%
+\expandafter\long\expandafter\def\csname change#1OnOff\endcsname{\expandafter\long\expandafter\def\csname change#1@state\endcsname{\ifx\changeAll@state\editingstate@undefined\editingstate@onoff%
+\else \changeAll@state\fi}}%
+\expandafter\long\expandafter\def\csname change#1Off\endcsname{\expandafter\long\expandafter\def\csname change#1@state\endcsname{\ifx\changeAll@state\editingstate@undefined\editingstate@off%
+\else \changeAll@state\fi}}%
+\csname change#1On\endcsname%
+\expandafter\protected\expandafter\long\expandafter\def\csname change#1\endcsname##1##2{\@change{##1}{##2}{#1}{#2}{#3}}%
+}%
+
+\newcommand{\@change}[5]{\edef\@tmpchange{\csname change#3@state\endcsname}%
+\ifx\@tmpchange\editingstate@on \relax \@changeon{#1}{#2}{#4}{#5}\else%
+\ifx\@tmpchange\editingstate@off \relax \@changeoff{#1}{#2}{#4}{#5}\else%
+\@changeonoff{#1}{#2}{#4}{#5}\fi%
+\fi%
+}
+
+\long\def\hypersetup@editing#1{\hypersetup{linkcolor=#1,citecolor=#1,filecolor=#1,urlcolor=#1}}%
+
+\long\def\@changeon#1#2#3#4{\if\relax\detokenize{#1}\relax\unskip\else{\if\relax\detokenize{#3}\relax\else%
+	\hypersetup@editing{#3}\color{#3}\fi{#1}}\fi}%
+\long\def\@changeoff#1#2#3#4{\if\relax\detokenize{#2}\relax\unskip\else{\if\relax\detokenize{#4}\relax\else%
+	\hypersetup@editing{#4}\color{#4}\fi{#2}}\fi}%
+\long\def\@changeonoff#1#2#3#4{\if\relax\detokenize{#1}\relax\unskip\else{\if\relax\detokenize{#3}\relax\else%
+	\hypersetup@editing{#3}\color{#3}\fi{#1}}\fi%
+\if\relax\detokenize{#2}\relax\unskip\else{\if\relax\detokenize{#4}\relax\else%
+	\conf@sout@editing\hypersetup@editing{#4}\color{#4}\fi\ifnum\@floatpenalty<0\relax\sout{#2}%
+\else{\def\newpar{[PAR BREAK]}\sout{#2}}\fi}\fi}%
+
+\newcommand{\newnote}[2]{%
+\expandafter\long\expandafter\def\csname note#1On\endcsname{\expandafter\def\csname note#1@state\endcsname{\ifx\noteAll@state\editingstate@undefined\editingstate@on%
+\else \noteAll@state\fi}}%
+\expandafter\def\csname note#1Off\endcsname{\expandafter\def\csname note#1@state\endcsname{\ifx\noteAll@state\editingstate@undefined\editingstate@off%
+\else \noteAll@state\fi}}%
+\csname note#1On\endcsname%
+\expandafter\protected\expandafter\long\expandafter\def\csname note#1\endcsname##1{\@note{##1}{#1}{#2}}}%
+
+\def\noteAllOn{\def\noteAll@state{on}}
+\def\noteAllOff{\def\noteAll@state{off}}
+\def\noteAllUndefined{\def\noteAll@state{undefined}}
+
+\noteAllUndefined
+
+\newcommand{\@note}[3]{\edef\@tmpnote{\csname note#2@state\endcsname}%
+\ifx\@tmpnote\editingstate@on \relax \@noteon{#1}{#3}\else%
+\ifx\@tmpnote\editingstate@off \relax \@noteoff{#1}{#3}\fi%
+\fi%
+}
+
+\newcommand{\@noteon}[2]{\if\relax\detokenize{#1}\relax\unskip\else{\if\relax\detokenize{#2}\relax\else%
+	\hypersetup@editing{#2}\color{#2}\fi%
+\textsc{\MakeLowercase{#1}}}\fi{}}%
+\newcommand{\@noteoff}[2]{\unskip}%
+
+%%% Macros for reply to referees
+
+\let\old@verbatim\@verbatim%
+\def\@verbatim{\topsep=0pt\partopsep=0pt\old@verbatim}
+
+\definecolor{replycolor}{RGB}{0,0,0}
+\definecolor{refereecolor}{RGB}{0,0,255}
+
+\renewenvironment{quotation}
+{\list{}{\parsep5pt\topsep5pt\rightmargin0cm\leftmargin1cm\item}\small``\ignorespaces}%
+{\unskip''\endlist\par\addvspace{5pt}}
+
+\newenvironment{referee}
+{\color{refereecolor}\par\addvspace{3pt}\verbatim}
+{\endverbatim\par\addvspace{3pt}}
+
+\newenvironment{reply}
+{\color{replycolor}\par\addvspace{3pt}}
+{\par\addvspace{6pt}}
+
+
+\endinput
